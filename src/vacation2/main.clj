@@ -76,7 +76,7 @@ Options:
             (+ (* (rand 5) 10) 50))
           (generate-relation []
             (for [i (range n-relations)]
-              (ref {:id i :seats (rand-seats :price (rand-price))})))]
+              (ref {:id i :seats (rand-seats) :price (rand-price)})))]
     {:reservations
       (for [i (range n-reservations)]
         (ref {:id i :fulfilled? false :total 0}))
