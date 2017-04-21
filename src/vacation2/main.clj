@@ -17,12 +17,16 @@
 ; PARSE COMMAND LINE OPTIONS
 
 (def cli-options
-  [["-n" "--customers N" "Number of customers"
+  [["-c" "--customers N" "Number of customers"
     :default 100
     :parse-fn #(Integer/parseInt %)]
    ["-r" "--reservations N" "Number of reservations"
     ; Corresponds to parameter -t in vacation.
     :default 1000
+    :parse-fn #(Integer/parseInt %)]
+   ["-n" "--relations N" "Number of flights/rooms/cars"
+    ; Corresponds to parameter -r in vacation.
+    :default 500
     :parse-fn #(Integer/parseInt %)]
    ;["-w" "--workers N" "Number of workers"
    ; :default 20
@@ -63,6 +67,23 @@ Options:
         options)
       nil)))
 
+; HELPER FUNCTIONS
+
+(defn initialize-data [n-customers n-relations]
+  (letfn [(rand-seats []
+            (* (+ (rand 5) 1) 100))
+          (rand-price []
+            (+ (* (rand 5) 10) 50))
+          (generate-relation []
+            (for [i (range n-relations)]
+              (ref {:id i :seats (rand-seats :price (rand-price))})))]
+    {:reservations
+      (for [i (range n-customers)]
+        (ref {:id i :fulfilled? false :total 0}))
+     :cars    (generate-relation)
+     :flights (generate-relation)
+     :rooms   (generate-relation)}))
+
 ; BEHAVIORS
 
 (def customer-behavior
@@ -78,17 +99,21 @@ Options:
 (defn -main [& args]
   "Main function. `args` should be a list of command line arguments."
   (when-let [options (parse-args args)]
-    (let [{:keys [reservations customers]} options
-          reservations-per-customer (quot reservations customers)
+    (let [{n-customers    :customers
+           n-reservations :reservations
+           n-relations    :relations} options
+          n-reservations-per-customer (quot n-reservations n-customers)
+          {:keys [reservations cars flights rooms]}
+            (initialize-data n-customers n-relations)
           customer-actors
-            (for [i (range customers)]
+            (for [i (range n-customers)]
               (spawn customer-behavior))]
-      (when (not= (rem reservations customers) 0)
+      (when (not= (rem n-reservations n-customers) 0)
         (println "WARNING: number of reservations is not divisible by number"
-          "of customers. Using" reservations-per-customer "reservations per"
-          "customer, so only" (* reservations-per-customer customers)
+          "of customers. Using" n-reservations-per-customer "reservations per"
+          "customer, so only" (* n-reservations-per-customer n-customers)
           "in total."))
       (doseq [c customer-actors]
-        (dotimes [_i reservations-per-customer]
+        (dotimes [_i n-reservations-per-customer]
           (send c)))))
   (shutdown-agents))
