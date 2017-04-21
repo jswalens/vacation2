@@ -69,7 +69,7 @@ Options:
 
 ; HELPER FUNCTIONS
 
-(defn initialize-data [n-customers n-relations]
+(defn initialize-data [n-customers n-reservations n-relations]
   (letfn [(rand-seats []
             (* (+ (rand 5) 1) 100))
           (rand-price []
@@ -78,21 +78,30 @@ Options:
             (for [i (range n-relations)]
               (ref {:id i :seats (rand-seats :price (rand-price))})))]
     {:reservations
-      (for [i (range n-customers)]
+      (for [i (range n-reservations)]
         (ref {:id i :fulfilled? false :total 0}))
      :cars    (generate-relation)
      :flights (generate-relation)
      :rooms   (generate-relation)}))
 
+(defn zip [& lists]
+  "Zip m lists of n elements into list of n m-tuples.
+
+  > (zip [1 2 3 4] [5 6 7 8] [9 10 11 12])
+  ([1 5 9] [2 6 10] [3 7 11] [4 8 12])
+
+  Based on http://stackoverflow.com/a/2588385/8137"
+  (apply map vector lists))
+
 ; BEHAVIORS
 
 (def customer-behavior
   (behavior
-    []
-    []
-    (log "start reservation")
-    (dosync
-      (println "TODO"))))
+    [customer-id]
+    [reservation done?]
+    (log "start reservation" (:id @reservation) "by customer" customer-id)
+    ; TODO
+    (deliver done? true)))
 
 ; MAIN
 
@@ -102,18 +111,17 @@ Options:
     (let [{n-customers    :customers
            n-reservations :reservations
            n-relations    :relations} options
-          n-reservations-per-customer (quot n-reservations n-customers)
           {:keys [reservations cars flights rooms]}
-            (initialize-data n-customers n-relations)
+            (initialize-data n-customers n-reservations n-relations)
           customer-actors
-            (for [i (range n-customers)]
-              (spawn customer-behavior))]
+            (map #(spawn customer-behavior %) (range n-customers))
+          done-promises
+            (repeatedly n-reservations promise)]
       (when (not= (rem n-reservations n-customers) 0)
         (println "WARNING: number of reservations is not divisible by number"
-          "of customers. Using" n-reservations-per-customer "reservations per"
-          "customer, so only" (* n-reservations-per-customer n-customers)
-          "in total."))
-      (doseq [c customer-actors]
-        (dotimes [_i n-reservations-per-customer]
-          (send c)))))
+          "of customers."))
+      (doseq [[customer reservation done?] (zip (cycle customer-actors) reservations done-promises)]
+        (send customer reservation done?))
+      (doseq [done? done-promises]
+        (deref done?))))
   (shutdown-agents))
