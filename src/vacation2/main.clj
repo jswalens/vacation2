@@ -1,7 +1,8 @@
 (ns vacation2.main
   (:gen-class)
   (:require [clojure.string]
-            [clojure.tools.cli]))
+            [clojure.tools.cli]
+            [util :refer :all]))
 
 ; LOGGING
 
@@ -75,20 +76,6 @@ Options:
       nil)))
 
 ; HELPER FUNCTIONS
-
-(defn zip [& lists]
-  "Zip m lists of n elements into list of n m-tuples.
-
-  > (zip [1 2 3 4] [5 6 7 8] [9 10 11 12])
-  ([1 5 9] [2 6 10] [3 7 11] [4 8 12])
-
-  Based on http://stackoverflow.com/a/2588385/8137"
-  (apply map vector lists))
-
-(defn random-subset [n coll]
-  "Get `n` randomly picked elements from `coll`.
-  Sampling is done with replacement, i.e. elements may appear multiple times."
-  (repeatedly n #(rand-nth coll)))
 
 (defn initialize-data [{:keys [n-reservations n-relations]}]
   (letfn [(rand-seats []
