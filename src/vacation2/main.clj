@@ -72,6 +72,9 @@ Options:
                      :n-relations    (:relations options)
                      :n-queries      (:queries options)}]
         (log "options: " options)
+        (when (not= (rem (:n-reservations options) (:n-customers options)) 0)
+          (println "WARNING: number of reservations is not divisible by number"
+            "of customers."))
         options)
       nil)))
 
@@ -145,6 +148,13 @@ Options:
 
 ; MAIN
 
+(defn- log-data [{:keys [reservations cars flights rooms]}]
+  "Write `data` to log."
+  (log "reservations:" reservations)
+  (log "cars:" cars)
+  (log "flights:" flights)
+  (log "rooms:" rooms))
+
 (defn -main [& args]
   "Main function. `args` should be a list of command line arguments."
   (when-let [options (parse-args args)]
@@ -155,20 +165,12 @@ Options:
             (map #(spawn customer-behavior % data options) (range n-customers))
           done-promises
             (repeatedly n-reservations promise)]
-      (when (not= (rem n-reservations n-customers) 0)
-        (println "WARNING: number of reservations is not divisible by number"
-          "of customers."))
-      (log "reservations:" reservations)
-      (log "cars:" cars)
-      (log "flights:" flights)
-      (log "rooms:" rooms)
-      (doseq [[customer reservation done?] (zip (cycle customer-actors) reservations done-promises)]
+      (log-data data)
+      (doseq [[customer reservation done?]
+                (zip (cycle customer-actors) reservations done-promises)]
         (send customer reservation done?))
       (doseq [done? done-promises]
         (deref done?))
-      (log "reservations:" reservations)
-      (log "cars:" cars)
-      (log "flights:" flights)
-      (log "rooms:" rooms)))
+      (log-data data)))
   (Thread/sleep 1000) ; XXX
   (shutdown-agents))
