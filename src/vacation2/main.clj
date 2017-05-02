@@ -82,7 +82,9 @@ Options:
 ; HELPER FUNCTIONS
 
 (defn initialize-data [{:keys [n-reservations n-relations]}]
-  (letfn [(rand-seats []
+  (letfn [(rand-number []
+            (+ (rand-int 5) 1))
+          (rand-seats []
             (* (+ (rand-int 5) 1) 100))
           (rand-price []
             (+ (* (rand-int 5) 10) 50))
@@ -92,12 +94,23 @@ Options:
     {:reservations
       (for [i (range n-reservations)]
         (ref {:id          i
-              :status      :unprocessed ; :unprocessed|:in-process|:processed XXX
-              :destination (str (rand-int 100)) ; 1 of 100 locations
+              :status      :unprocessed
+              ; Status of reservation: :unprocessed|:in-process|:processed
+              ; FIXME: :processed is not used
+              :n-people    (rand-number)
+              ; Number of people to reserve for
+              ; Note: the original vacation benchmark only seems to reserve for
+              ; one person per reservation.
+              :destination (str (rand-int 100))
+              ; Destination, 1 of 100 locations.
               ; Note: the concept of destination does not exist in the original
               ; vacation benchmark. We introduce it, to generate PNRs.
               :pnr         nil
+              ; Passenger Name Record: stores some data about the reservation
+              ; that can be printed on the passenger's ticket (maybe as a QR
+              ; code)
               :total       0}))
+              ; Total price
      :cars    (generate-relation)
      :flights (generate-relation)
      :rooms   (generate-relation)}))
@@ -147,15 +160,15 @@ Options:
    {:keys [n-queries]}]
   "Process a reservation: find a car, flight, and room for the reservation and
   update the data structures."
-  ; TODO: does vacation always only reserve 1 seat?
   (dosync
-    (let [found-car    (look-for-seats (random-subset n-queries cars) 1)
-          found-flight (look-for-seats (random-subset n-queries flights) 1)
-          found-room   (look-for-seats (random-subset n-queries rooms) 1)
+    (let [n-people     (:n-people @reservation)
+          found-car    (look-for-seats (random-subset n-queries cars) n-people)
+          found-flight (look-for-seats (random-subset n-queries flights) n-people)
+          found-room   (look-for-seats (random-subset n-queries rooms) n-people)
           pnr          (generate-pnr reservation)]
-      (when found-car    (reserve-relation reservation found-car 1))
-      (when found-flight (reserve-relation reservation found-flight 1))
-      (when found-room   (reserve-relation reservation found-room 1))
+      (when found-car    (reserve-relation reservation found-car n-people))
+      (when found-flight (reserve-relation reservation found-flight n-people))
+      (when found-room   (reserve-relation reservation found-room n-people))
       (alter reservation assoc
         :status :in-process
         :pnr    pnr))))
