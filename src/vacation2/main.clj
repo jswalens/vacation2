@@ -92,7 +92,7 @@ Options:
     {:reservations
       (for [i (range n-reservations)]
         (ref {:id          i
-              :status      :unprocessed ; :unprocessed|:in-process|:processed
+              :status      :unprocessed ; :unprocessed|:in-process|:processed XXX
               :destination (str (rand-int 100)) ; 1 of 100 locations
               ; Note: the concept of destination does not exist in the original
               ; vacation benchmark. We introduce it, to generate PNRs.
@@ -157,7 +157,7 @@ Options:
       (when found-flight (reserve-relation reservation found-flight 1))
       (when found-room   (reserve-relation reservation found-room 1))
       (alter reservation assoc
-        :status true
+        :status :in-process
         :pnr    pnr))))
 ; TODO: add some logging
 
