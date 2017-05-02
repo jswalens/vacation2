@@ -1,8 +1,8 @@
 (ns vacation2.main
   (:gen-class)
-  (:import java.util.Base64)
   (:require [clojure.string]
             [clojure.tools.cli]
+            [base64]
             [util :refer :all]))
 
 ; LOGGING
@@ -122,12 +122,6 @@ Options:
     (alter relation update :seats - n-seats)
     (alter reservation update :total + (:price @relation))))
 
-(defn- str->base64 [data]
-  (.encodeToString (Base64/getEncoder) (.getBytes data)))
-
-(defn- base64->str [data]
-  (String. (.decode (Base64/getDecoder) data)))
-
 (defn generate-pnr [reservation]
   "Generate Passenger Name Record (PNR).
   The generated PNR is fake, but based on the information described on
@@ -145,7 +139,7 @@ Options:
                               ticket-number
                               itinerary
                               timestamp])]
-    (str->base64 data)))
+    (base64/str->base64 data)))
 
 (defn process-reservation
   [reservation
