@@ -216,5 +216,5 @@ Options:
       (doseq [done? done-promises]
         (deref done?))
       (log-data data)))
-  (Thread/sleep 1000) ; XXX why is this needed when we have the promises?
+  (Thread/sleep 1000) ; XXX This is needed as log actor might not have finished yet
   (shutdown-agents))
