@@ -161,18 +161,23 @@ Options:
   "Process a reservation: find a car, flight, and room for the reservation and
   update the data structures."
   (dosync
+    (log "start tx for reservation" (:id @reservation))
     (let [n-people     (:n-people @reservation)
           found-car    (look-for-seats (random-subset n-queries cars) n-people)
           found-flight (look-for-seats (random-subset n-queries flights) n-people)
           found-room   (look-for-seats (random-subset n-queries rooms) n-people)
           pnr          (generate-pnr reservation)]
+      (log "reserving:"
+        (if found-car    (str "car "    (:id @found-car))    "no car")    "-"
+        (if found-flight (str "flight " (:id @found-flight)) "no flight") "-"
+        (if found-room   (str "room "   (:id @found-room))   "no room"))
       (when found-car    (reserve-relation reservation found-car n-people))
       (when found-flight (reserve-relation reservation found-flight n-people))
       (when found-room   (reserve-relation reservation found-room n-people))
       (alter reservation assoc
         :status :in-process
-        :pnr    pnr))))
-; TODO: add some logging
+        :pnr    pnr)))
+  (log "finished reservation" (:id @reservation)))
 
 ; BEHAVIORS
 
