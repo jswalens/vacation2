@@ -209,12 +209,12 @@ Options:
             (map #(spawn worker-behavior % data options) (range n-workers))
           done-promises
             (repeatedly n-reservations promise)]
-      (log-data data)
+      #_(log-data data)
       (doseq [[worker reservation done?]
                 (zip (cycle worker-actors) reservations done-promises)]
         (send worker reservation done?))
       (doseq [done? done-promises]
         (deref done?))
-      (log-data data)))
-  (Thread/sleep 1000) ; XXX This is needed as log actor might not have finished yet
-  (shutdown-agents))
+      #_(log-data data)))
+  (log "done")
+  (System/exit 0))
