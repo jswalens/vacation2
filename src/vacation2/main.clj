@@ -1,5 +1,6 @@
 (ns vacation2.main
   (:gen-class)
+  (:import java.util.Base64)
   (:require [clojure.string]
             [clojure.tools.cli]
             [util :refer :all]))
@@ -90,7 +91,13 @@ Options:
               (ref {:id i :seats (rand-seats) :price (rand-price)})))]
     {:reservations
       (for [i (range n-reservations)]
-        (ref {:id i :fulfilled? false :total 0}))
+        (ref {:id          i
+              :status      :unprocessed ; :unprocessed|:in-process|:processed
+              :destination (str (rand-int 100)) ; 1 of 100 locations
+              ; Note: the concept of destination does not exist in the original
+              ; vacation benchmark. We introduce it, to generate PNRs.
+              :pnr         nil
+              :total       0}))
      :cars    (generate-relation)
      :flights (generate-relation)
      :rooms   (generate-relation)}))
@@ -106,7 +113,7 @@ Options:
       (sort-by (comp :price deref))
       (first))))
 
-(defn reserve [reservation relation n-seats]
+(defn reserve-relation [reservation relation n-seats]
   "Reserve `n-seats` on `relation`, for `reservation`.
 
   Decreases the number of seats in `relation`, and updates the total in
@@ -114,6 +121,31 @@ Options:
   (dosync
     (alter relation update :seats - n-seats)
     (alter reservation update :total + (:price @relation))))
+
+(defn- str->base64 [data]
+  (.encodeToString (Base64/getEncoder) (.getBytes data)))
+
+(defn- base64->str [data]
+  (String. (.decode (Base64/getDecoder) data)))
+
+(defn generate-pnr [reservation]
+  "Generate Passenger Name Record (PNR).
+  The generated PNR is fake, but based on the information described on
+  Wikipedia.
+
+  https://en.wikipedia.org/wiki/Passenger_name_record"
+  (let [name-of-passenger (:id @reservation)
+        info-travel-agent "vacation-benchmark"
+        ticket-number     (rand-int 10000)
+        itinerary         (:destination @reservation)
+        timestamp         (System/currentTimeMillis)
+        data              (clojure.string/join "//"
+                             [name-of-passenger
+                              info-travel-agent
+                              ticket-number
+                              itinerary
+                              timestamp])]
+    (str->base64 data)))
 
 (defn process-reservation
   [reservation
@@ -125,12 +157,14 @@ Options:
   (dosync
     (let [found-car    (look-for-seats (random-subset n-queries cars) 1)
           found-flight (look-for-seats (random-subset n-queries flights) 1)
-          found-room   (look-for-seats (random-subset n-queries rooms) 1)]
-      (when found-car    (reserve reservation found-car 1))
-      (when found-flight (reserve reservation found-flight 1))
-      (when found-room   (reserve reservation found-room 1))
-      (alter reservation assoc :fulfilled?
-        (some? (or found-car found-flight found-room))))))
+          found-room   (look-for-seats (random-subset n-queries rooms) 1)
+          pnr          (generate-pnr reservation)]
+      (when found-car    (reserve-relation reservation found-car 1))
+      (when found-flight (reserve-relation reservation found-flight 1))
+      (when found-room   (reserve-relation reservation found-room 1))
+      (alter reservation assoc
+        :status true
+        :pnr    pnr))))
 ; TODO: add some logging
 
 ; BEHAVIORS
