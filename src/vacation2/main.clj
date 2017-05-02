@@ -19,8 +19,9 @@
 ; PARSE COMMAND LINE OPTIONS
 
 (def cli-options
-  [["-c" "--customers N" "Number of customers"
-    :default 100
+  [["-w" "--workers N" "Number of workers"
+    ; Workers are called clients in vacation, the option is -c there.
+    :default 20
     :parse-fn #(Integer/parseInt %)]
    ["-n" "--queries N" "Number of queries per relation per reservation"
     ; In vacation, this is the total number of queries per reservation; here,
@@ -34,9 +35,6 @@
     ; Reservations are called "transactions" in vacation.
     :default 1000
     :parse-fn #(Integer/parseInt %)]
-   ;["-w" "--workers N" "Number of workers"
-   ; :default 20
-   ; :parse-fn #(Integer/parseInt %)]
    ["-d" "--debug" "Print debug information"]
    ["-h" "--help" "Print help information"]])
 
@@ -68,14 +66,14 @@ Options:
     (when (:debug options)
       (def log log-debug))
     (if proceed?
-      (let [options {:n-customers    (:customers options)
+      (let [options {:n-workers      (:workers options)
                      :n-reservations (:reservations options)
                      :n-relations    (:relations options)
                      :n-queries      (:queries options)}]
         (log "options: " options)
-        (when (not= (rem (:n-reservations options) (:n-customers options)) 0)
+        (when (not= (rem (:n-reservations options) (:n-workers options)) 0)
           (println "WARNING: number of reservations is not divisible by number"
-            "of customers."))
+            "of workers."))
         options)
       nil)))
 
@@ -181,14 +179,14 @@ Options:
 
 ; BEHAVIORS
 
-; TODO: this is not really a customer, but more a manager.
-; TODO: what is a customer then? what is the difference between a customer and
-; a reservation?
-(def customer-behavior
+; In vacation, this corresponds to a client.
+(def worker-behavior
   (behavior
-    [customer-id data options]
+    [worker-id data options]
     [reservation done?]
-    (log "start reservation" (:id @reservation) "by customer" customer-id)
+    ; Note: as opposed to the vacation benchmark, we only support making
+    ; reservations, not deleting customers or updating tables.
+    (log "start reservation" (:id @reservation) "by worker" worker-id)
     (process-reservation reservation data options)
     (deliver done? true)))
 
@@ -204,19 +202,19 @@ Options:
 (defn -main [& args]
   "Main function. `args` should be a list of command line arguments."
   (when-let [options (parse-args args)]
-    (let [{:keys [n-customers n-reservations]} options
+    (let [{:keys [n-workers n-reservations]} options
           {:keys [reservations cars flights rooms] :as data}
             (initialize-data options)
-          customer-actors
-            (map #(spawn customer-behavior % data options) (range n-customers))
+          worker-actors
+            (map #(spawn worker-behavior % data options) (range n-workers))
           done-promises
             (repeatedly n-reservations promise)]
       (log-data data)
-      (doseq [[customer reservation done?]
-                (zip (cycle customer-actors) reservations done-promises)]
-        (send customer reservation done?))
+      (doseq [[worker reservation done?]
+                (zip (cycle worker-actors) reservations done-promises)]
+        (send worker reservation done?))
       (doseq [done? done-promises]
         (deref done?))
       (log-data data)))
-  (Thread/sleep 1000) ; XXX
+  (Thread/sleep 1000) ; XXX why is this needed when we have the promises?
   (shutdown-agents))
