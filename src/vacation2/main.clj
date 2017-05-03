@@ -11,7 +11,9 @@
   "Log the given arguments. This does nothing, but is overwritten in parse-args
   if the debug option is enabled."
   nil)
+
 (def logger (agent nil))
+
 (defn log-debug [& args]
   "Log the given arguments. This function is used when debugging is enabled."
   (send logger (fn [_] (apply println args))))
