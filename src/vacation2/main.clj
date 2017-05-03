@@ -232,5 +232,6 @@ Options:
   (when-let [options (parse-args args)]
     (send (spawn master-initial-behavior options) :start)
     (deref done?))
+  ; TODO: implement validation
   (log "exit")
   (System/exit 0))
