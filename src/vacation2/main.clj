@@ -93,8 +93,7 @@ Options:
       (for [i (range n-reservations)]
         (ref {:id          i
               :status      :unprocessed
-              ; Status of reservation: :unprocessed|:in-process|:processed
-              ; FIXME: :processed is not used
+              ; Status of reservation: :unprocessed|:processed
               :n-people    (rand-number)
               ; Number of people to reserve for
               ; Note: the original vacation benchmark only seems to reserve for
@@ -112,6 +111,13 @@ Options:
      :cars    (generate-relation)
      :flights (generate-relation)
      :rooms   (generate-relation)}))
+
+(defn- log-data [{:keys [reservations cars flights rooms]}]
+  "Write `data` to log."
+  (log "reservations:" reservations)
+  (log "cars:" cars)
+  (log "flights:" flights)
+  (log "rooms:" rooms))
 
 (defn- look-for-seats [relations n-seats]
   "Look for a relation with `n-seats` free seats in `relations`, and return the
@@ -173,7 +179,7 @@ Options:
       (when found-flight (reserve-relation reservation found-flight n-people))
       (when found-room   (reserve-relation reservation found-room n-people))
       (alter reservation assoc
-        :status :in-process
+        :status :processed
         :pnr    pnr)))
   (log "finished reservation" (:id @reservation)))
 
@@ -218,13 +224,6 @@ Options:
       (become master-waiting-behavior n-reservations))))
 
 ; MAIN
-
-(defn- log-data [{:keys [reservations cars flights rooms]}]
-  "Write `data` to log."
-  (log "reservations:" reservations)
-  (log "cars:" cars)
-  (log "flights:" flights)
-  (log "rooms:" rooms))
 
 (defn -main [& args]
   "Main function. `args` should be a list of command line arguments."
