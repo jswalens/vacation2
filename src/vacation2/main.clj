@@ -182,13 +182,40 @@ Options:
 ; In vacation, this corresponds to a client.
 (def worker-behavior
   (behavior
-    [worker-id data options]
-    [reservation done?]
+    [worker-id master data options]
+    [reservation]
     ; Note: as opposed to the vacation benchmark, we only support making
     ; reservations, not deleting customers or updating tables.
     (log "start reservation" (:id @reservation) "by worker" worker-id)
     (process-reservation reservation data options)
-    (deliver done? true)))
+    (send master :done (:id @reservation))))
+
+(def done? (promise))
+
+(def master-waiting-behavior
+  (behavior
+    [n]
+    [_done _reservation-id]
+    (if (= n 1)
+      (do
+        (log "done")
+        #_(log-data data)
+        (deliver done? true))
+      (become :same (dec n)))))
+
+(def master-initial-behavior
+  (behavior
+    [{:keys [n-workers n-reservations] :as options}]
+    [_start]
+    (let [{:keys [reservations cars flights rooms] :as data}
+            (initialize-data options)
+          worker-actors
+            (map #(spawn worker-behavior % *actor* data options)
+              (range n-workers))]
+      #_(log-data data)
+      (doseq [[worker reservation] (zip (cycle worker-actors) reservations)]
+        (send worker reservation))
+      (become master-waiting-behavior n-reservations))))
 
 ; MAIN
 
@@ -202,19 +229,7 @@ Options:
 (defn -main [& args]
   "Main function. `args` should be a list of command line arguments."
   (when-let [options (parse-args args)]
-    (let [{:keys [n-workers n-reservations]} options
-          {:keys [reservations cars flights rooms] :as data}
-            (initialize-data options)
-          worker-actors
-            (map #(spawn worker-behavior % data options) (range n-workers))
-          done-promises
-            (repeatedly n-reservations promise)]
-      #_(log-data data)
-      (doseq [[worker reservation done?]
-                (zip (cycle worker-actors) reservations done-promises)]
-        (send worker reservation done?))
-      (doseq [done? done-promises]
-        (deref done?))
-      #_(log-data data)))
-  (log "done")
+    (send (spawn master-initial-behavior options) :start)
+    (deref done?))
+  (log "exit")
   (System/exit 0))
