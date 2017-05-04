@@ -26,6 +26,10 @@
     ; Workers are called clients in vacation, the option is -c there.
     :default 20
     :parse-fn #(Integer/parseInt %)]
+   ["-s" "--secondary-workers N" "Number of secondary workers"
+    ; New, not in vacation.
+    :default 20
+    :parse-fn #(Integer/parseInt %)]
    ["-n" "--queries N" "Number of queries per relation per reservation"
     ; In vacation, this is the total number of queries per reservation; here,
     ; this is the number of queries per relation per reservation, so / 3.
@@ -69,10 +73,11 @@ Options:
     (when (:debug options)
       (def log log-debug))
     (if proceed?
-      (let [options {:n-workers      (:workers options)
-                     :n-reservations (:reservations options)
-                     :n-relations    (:relations options)
-                     :n-queries      (:queries options)}]
+      (let [options {:n-workers           (:workers options)
+                     :n-secondary-workers (:secondary-workers options)
+                     :n-reservations      (:reservations options)
+                     :n-relations         (:relations options)
+                     :n-queries           (:queries options)}]
         (log "options: " options)
         (when (not= (rem (:n-reservations options) (:n-workers options)) 0)
           (println "WARNING: number of reservations is not divisible by number"
@@ -161,7 +166,7 @@ Options:
                               timestamp])]
     (base64/str->base64 data)))
 
-(defn process-reservation
+(defn process-reservation-seq
   [reservation
    {:keys [cars flights rooms]}
    {:keys [n-queries]}]
@@ -186,25 +191,59 @@ Options:
         :pnr    pnr)))
   (log "finished reservation" (:id @reservation)))
 
+(defn process-reservation-par
+  [reservation
+   {:keys [cars flights rooms]}
+   {:keys [n-queries]}
+   workers]
+  "Process a reservation: find a car, flight, and room for the reservation and
+  update the data structures."
+  (dosync
+    (log "start tx for reservation" (:id @reservation))
+    (send (rand-nth workers) :car    cars    reservation n-queries)
+    (send (rand-nth workers) :flight flights reservation n-queries)
+    (send (rand-nth workers) :room   rooms   reservation n-queries)
+    (let [pnr (generate-pnr reservation)]
+      (alter reservation assoc
+        :status :in-process
+        :pnr    pnr)))
+  (log "finished reservation" (:id @reservation)))
+
 ; BEHAVIORS
 
-; In vacation, this corresponds to a client.
-(def worker-behavior
+(def reserve-relation-behavior
   (behavior
-    [worker-id master data options]
+    [secondary-worker-id master]
+    [relation-name relation reservation n-queries]
+    (log "reserve" relation-name "for reservation" (:id @reservation)
+      "by secondary worker" secondary-worker-id)
+    (dosync
+      (let [n-people (:n-people @reservation)
+            found-relation
+              (look-for-seats (random-subset n-queries relation) n-people)]
+        (when found-relation
+          (log "reserving" relation-name (:id @found-relation))
+          (reserve-relation reservation found-relation n-people))))
+    (send master :done relation-name (:id @reservation))))
+
+; In vacation, this corresponds to a client.
+(def reservation-behavior
+  (behavior
+    [worker-id master secondary-workers data options]
     [reservation]
     ; Note: as opposed to the vacation benchmark, we only support making
     ; reservations, not deleting customers or updating tables.
     (log "start reservation" (:id @reservation) "by worker" worker-id)
-    (process-reservation reservation data options)
-    (send master :done (:id @reservation))))
+    (process-reservation-par reservation data options secondary-workers)
+    (send master :done :reservation (:id @reservation))))
 
 (def done? (promise))
 
 (def master-waiting-behavior
   (behavior
     [n]
-    [_done _reservation-id]
+    [_done _key _id]
+    ; _key is one of :reservation, :car, :flight, :room
     (if (= n 1)
       (do
         (log "done")
@@ -214,17 +253,24 @@ Options:
 
 (def master-initial-behavior
   (behavior
-    [{:keys [n-workers n-reservations] :as options}]
+    [{:keys [n-workers n-secondary-workers n-reservations] :as options}]
     [_start]
     (let [{:keys [reservations cars flights rooms] :as data}
             (initialize-data options)
-          worker-actors
-            (map #(spawn worker-behavior % *actor* data options)
-              (range n-workers))]
+          ; It is important to wrap the two maps below in doall, so that they
+          ; are executed here, where *actor* refers to the master actor, and not
+          ; in another place. Stupid lazy Clojure.
+          secondary-workers
+            (doall (map #(spawn reserve-relation-behavior % *actor*)
+                        (range n-secondary-workers)))
+          reservation-workers
+            (doall (map #(spawn reservation-behavior
+                          % *actor* secondary-workers data options)
+                        (range n-workers)))]
       #_(log-data data)
-      (doseq [[worker reservation] (zip (cycle worker-actors) reservations)]
+      (doseq [[worker reservation] (zip (cycle reservation-workers) reservations)]
         (send worker reservation))
-      (become master-waiting-behavior n-reservations))))
+      (become master-waiting-behavior (* n-reservations 4)))))
 
 ; MAIN
 
