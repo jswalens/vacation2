@@ -12,11 +12,12 @@
   if the debug option is enabled."
   nil)
 
-(def logger (agent nil))
+(def log-lock (Object.))
 
 (defn log-debug [& args]
   "Log the given arguments. This function is used when debugging is enabled."
-  (send logger (fn [_] (apply println args))))
+  (locking log-lock
+    (apply println args)))
 
 ; PARSE COMMAND LINE OPTIONS
 
