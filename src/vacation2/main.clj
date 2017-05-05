@@ -22,7 +22,13 @@
 ; PARSE COMMAND LINE OPTIONS
 
 (def cli-options
-  [["-w" "--workers N" "Number of workers"
+  [["-v" "--version X" "Version (seq, par)"
+    ; TODO: rename "seq", because it's not sequential.
+    ; There are two versions of this program, "seq" works similar to the
+    ; original vacation benchmark, while "par" uses secondary worker actors.
+    :default "seq"
+    :validate [#(contains? #{"seq" "par"} %) "Must be seq or par"]]
+   ["-w" "--workers N" "Number of workers"
     ; Workers are called clients in vacation, the option is -c there.
     :default 20
     :parse-fn #(Integer/parseInt %)]
@@ -53,16 +59,17 @@ Options:
 
 " (:summary (clojure.tools.cli/parse-opts nil cli-options))))
 
-(defn parse-args [args]
+(defn parse-args [cli-args]
   "Parse command line arguments.
 
   Prints help or error messages as needed.
 
   Returns the options if everything went as expected, or nil if the program
   should not proceed. Hence, can be used in a when-let."
-  (let [{:keys [options errors]} (clojure.tools.cli/parse-opts args cli-options)
+  (let [{args :options errors :errors}
+          (clojure.tools.cli/parse-opts cli-args cli-options)
         print-error? (not-empty errors)
-        print-help?  (or (not-empty errors) (:help options))
+        print-help?  (or (not-empty errors) (:help args))
         proceed?     (not (or print-error? print-help?))]
     (when print-error?
       (println "ERROR: Error when parsing command line arguments:\n "
@@ -70,15 +77,24 @@ Options:
     (when print-help?
       (println usage-info))
     ; overwrite "log" function if debugging is enabled
-    (when (:debug options)
+    (when (:debug args)
       (def log log-debug))
     (if proceed?
-      (let [options {:n-workers           (:workers options)
-                     :n-secondary-workers (:secondary-workers options)
-                     :n-reservations      (:reservations options)
-                     :n-relations         (:relations options)
-                     :n-queries           (:queries options)}]
+      (let [options {:version             (case (:version args)
+                                            "par" :par
+                                                  :seq)
+                     :n-workers           (:workers args)
+                     :n-secondary-workers (if (not= (:version args) "par")
+                                            0
+                                            (:secondary-workers args))
+                     :n-reservations      (:reservations args)
+                     :n-relations         (:relations args)
+                     :n-queries           (:queries args)}]
         (log "options: " options)
+        (when (and (= (:version args) :seq)
+                   (not= (:secondary-workers args) 20)) ; 20 is the default
+          (println "WARNING: did not expect number of secondary workers to be"
+            "specified when version is 'seq'."))
         (when (not= (rem (:n-reservations options) (:n-workers options)) 0)
           (println "WARNING: number of reservations is not divisible by number"
             "of workers."))
@@ -195,14 +211,14 @@ Options:
   [reservation
    {:keys [cars flights rooms]}
    {:keys [n-queries]}
-   workers]
+   secondary-workers]
   "Process a reservation: find a car, flight, and room for the reservation and
   update the data structures."
   (dosync
     (log "start tx for reservation" (:id @reservation))
-    (send (rand-nth workers) :car    cars    reservation n-queries)
-    (send (rand-nth workers) :flight flights reservation n-queries)
-    (send (rand-nth workers) :room   rooms   reservation n-queries)
+    (send (rand-nth secondary-workers) :car    cars    reservation n-queries)
+    (send (rand-nth secondary-workers) :flight flights reservation n-queries)
+    (send (rand-nth secondary-workers) :room   rooms   reservation n-queries)
     (let [pnr (generate-pnr reservation)]
       (alter reservation assoc
         :status :in-process
@@ -234,26 +250,32 @@ Options:
     ; Note: as opposed to the vacation benchmark, we only support making
     ; reservations, not deleting customers or updating tables.
     (log "start reservation" (:id @reservation) "by worker" worker-id)
-    (process-reservation-par reservation data options secondary-workers)
+    (case (:version options)
+      :par
+        (process-reservation-par reservation data options secondary-workers)
+      ;seq
+        (process-reservation-seq reservation data options))
     (send master :done :reservation (:id @reservation))))
 
 (def done? (promise))
 
 (def master-waiting-behavior
   (behavior
-    [n]
+    [start-time n]
     [_done _key _id]
     ; _key is one of :reservation, :car, :flight, :room
     (if (= n 1)
       (do
+        (println "Total execution time:"
+          (/ (- (System/nanoTime) start-time) 1000) "ms")
         (log "done")
         #_(log-data data)
         (deliver done? true))
-      (become :same (dec n)))))
+      (become :same start-time (dec n)))))
 
 (def master-initial-behavior
   (behavior
-    [{:keys [n-workers n-secondary-workers n-reservations] :as options}]
+    [{:keys [version n-workers n-secondary-workers n-reservations] :as options}]
     [_start]
     (let [{:keys [reservations cars flights rooms] :as data}
             (initialize-data options)
@@ -263,14 +285,21 @@ Options:
           secondary-workers
             (doall (map #(spawn reserve-relation-behavior % *actor*)
                         (range n-secondary-workers)))
+            ; n-secondary-workers = 0 if version == :seq
           reservation-workers
             (doall (map #(spawn reservation-behavior
                           % *actor* secondary-workers data options)
-                        (range n-workers)))]
+                        (range n-workers)))
+          expected-n-done-messages
+            (case version
+              :par (* n-reservations 4)
+                   n-reservations)
+          start-time
+            (System/nanoTime)]
       #_(log-data data)
       (doseq [[worker reservation] (zip (cycle reservation-workers) reservations)]
         (send worker reservation))
-      (become master-waiting-behavior (* n-reservations 4)))))
+      (become master-waiting-behavior start-time expected-n-done-messages))))
 
 ; MAIN
 
