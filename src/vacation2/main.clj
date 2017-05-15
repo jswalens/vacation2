@@ -267,7 +267,7 @@ Options:
     (if (= n 1)
       (do
         (println "Total execution time:"
-          (/ (- (System/nanoTime) start-time) 1000) "ms")
+          (format "%.3f" (/ (- (System/nanoTime) start-time) 1000000.0)) "ms")
         (log "done")
         #_(log-data data)
         (deliver done? true))
