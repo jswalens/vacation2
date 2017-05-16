@@ -22,12 +22,11 @@
 ; PARSE COMMAND LINE OPTIONS
 
 (def cli-options
-  [["-v" "--version X" "Version (seq, par)"
-    ; TODO: rename "seq", because it's not sequential.
-    ; There are two versions of this program, "seq" works similar to the
-    ; original vacation benchmark, while "par" uses secondary worker actors.
-    :default "seq"
-    :validate [#(contains? #{"seq" "par"} %) "Must be seq or par"]]
+  [["-v" "--version X" "Version (orig, txact)"
+    ; There are two versions of this program, "orig" works similar to the
+    ; original vacation benchmark, while "txact" uses secondary worker actors.
+    :default "orig"
+    :validate [#(contains? #{"orig" "txact"} %) "Must be orig or txact"]]
    ["-w" "--workers N" "Number of workers"
     ; Workers are called clients in vacation, the option is -c there.
     :default 20
@@ -81,20 +80,20 @@ Options:
       (def log log-debug))
     (if proceed?
       (let [options {:version             (case (:version args)
-                                            "par" :par
-                                                  :seq)
+                                            "txact" :txact
+                                                    :orig)
                      :n-workers           (:workers args)
-                     :n-secondary-workers (if (not= (:version args) "par")
+                     :n-secondary-workers (if (not= (:version args) "txact")
                                             0
                                             (:secondary-workers args))
                      :n-reservations      (:reservations args)
                      :n-relations         (:relations args)
                      :n-queries           (:queries args)}]
         (log "options: " options)
-        (when (and (= (:version args) :seq)
+        (when (and (= (:version args) :orig)
                    (not= (:secondary-workers args) 20)) ; 20 is the default
           (println "WARNING: did not expect number of secondary workers to be"
-            "specified when version is 'seq'."))
+            "specified when version is 'orig'."))
         (when (not= (rem (:n-reservations options) (:n-workers options)) 0)
           (println "WARNING: number of reservations is not divisible by number"
             "of workers."))
@@ -182,12 +181,14 @@ Options:
                               timestamp])]
     (base64/str->base64 data)))
 
-(defn process-reservation-seq
+(defn process-reservation-orig
   [reservation
    {:keys [cars flights rooms]}
    {:keys [n-queries]}]
-  "Process a reservation: find a car, flight, and room for the reservation and
-  update the data structures."
+  "Process a reservation: find a car, flight, and room for the reservation,
+  generate a PNR, and update the data structures.
+
+  This version is similar to the original vacation benchmark."
   (dosync
     (log "start tx for reservation" (:id @reservation))
     (let [n-people     (:n-people @reservation)
@@ -207,13 +208,15 @@ Options:
         :pnr    pnr)))
   (log "finished reservation" (:id @reservation)))
 
-(defn process-reservation-par
+(defn process-reservation-txact
   [reservation
    {:keys [cars flights rooms]}
    {:keys [n-queries]}
    secondary-workers]
-  "Process a reservation: find a car, flight, and room for the reservation and
-  update the data structures."
+  "Process a reservation: find a car, flight, and room for the reservation,
+  generate a PNR, and update the data structures.
+
+  This version books the car, flight, and room in a separate actor."
   (dosync
     (log "start tx for reservation" (:id @reservation))
     (send (rand-nth secondary-workers) :car    cars    reservation n-queries)
@@ -251,10 +254,10 @@ Options:
     ; reservations, not deleting customers or updating tables.
     (log "start reservation" (:id @reservation) "by worker" worker-id)
     (case (:version options)
-      :par
-        (process-reservation-par reservation data options secondary-workers)
-      ;seq
-        (process-reservation-seq reservation data options))
+      :txact
+        (process-reservation-txact reservation data options secondary-workers)
+      ;orig
+        (process-reservation-orig reservation data options))
     (send master :done :reservation (:id @reservation))))
 
 (def done? (promise))
@@ -285,15 +288,15 @@ Options:
           secondary-workers
             (doall (map #(spawn reserve-relation-behavior % *actor*)
                         (range n-secondary-workers)))
-            ; n-secondary-workers = 0 if version == :seq
+            ; n-secondary-workers = 0 if version == :orig
           reservation-workers
             (doall (map #(spawn reservation-behavior
                           % *actor* secondary-workers data options)
                         (range n-workers)))
           expected-n-done-messages
             (case version
-              :par (* n-reservations 4)
-                   n-reservations)
+              :txact (* n-reservations 4)
+                     n-reservations)
           start-time
             (System/nanoTime)]
       #_(log-data data)
