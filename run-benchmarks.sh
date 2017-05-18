@@ -25,16 +25,16 @@ for i in 1 2 3
 do
     # ORIGINAL VERSION
     version="orig"
-    for w in $(seq 2)
+    for w in $(seq 64)
     do
         $lein run -- -v $version -w $w > "$result_path/$version-w$w-i$i.txt"
     done
 
     # TXACT VERSION
     version="txact"
-    for w in $(seq 2)
+    for w in $(seq 64)
     do
-        for s in $(seq 2)
+        for s in $(seq 64)
         do
             $lein run -- -v $version -w $w > "$result_path/$version-w$w-s$s-i$i.txt"
         done
