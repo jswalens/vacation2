@@ -89,7 +89,7 @@ Options:
                      :n-reservations      (:reservations args)
                      :n-relations         (:relations args)
                      :n-queries           (:queries args)}]
-        (log "options: " options)
+        (println "options: " options)
         (when (and (= (:version args) :orig)
                    (not= (:secondary-workers args) 20)) ; 20 is the default
           (println "WARNING: did not expect number of secondary workers to be"
