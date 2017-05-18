@@ -36,7 +36,7 @@ do
     do
         for s in $(seq 64)
         do
-            $lein run -- -v $version -w $w > "$result_path/$version-w$w-s$s-i$i.txt"
+            $lein run -- -v $version -w $w -s $s > "$result_path/$version-w$w-s$s-i$i.txt"
         done
     done
 done
