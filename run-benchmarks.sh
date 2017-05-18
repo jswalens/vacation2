@@ -7,8 +7,7 @@ rev=`git rev-parse HEAD | cut -c1-8`
 date=`date "+%Y%m%dT%H%M"`
 result_path="$pwd/results/$date-$rev"
 
-#lein=$pwd/lein
-lein=lein
+lein=$pwd/lein
 
 echo "Installing/checking lein..."
 $lein version
