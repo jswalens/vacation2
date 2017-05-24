@@ -7,14 +7,12 @@ rev=`git rev-parse HEAD | cut -c1-8`
 date=`date "+%Y%m%dT%H%M"`
 result_path="$pwd/results/$date-$rev"
 
-lein=$pwd/lein
-
 echo "Installing/checking lein..."
-$lein version
+./lein version
 echo "lein installed"
 
 echo "Making uberjar"
-$lein uberjar
+./lein uberjar
 echo "Uberjar made"
 
 echo "Benchmarking..."
@@ -27,7 +25,7 @@ do
     version="orig"
     for w in 1 2 3 4 5 6 7 8 10 12 14 16 20 24 28 32 48 64
     do
-        $lein run -- -v $version -w $w > "$result_path/$version-w$w-i$i.txt"
+        ./lein run -- -v $version -w $w > "$result_path/$version-w$w-i$i.txt"
     done
 
     # TXACT VERSION
@@ -36,7 +34,7 @@ do
     do
         for s in 1 2 3 4 5 6 7 8 10 12 14 16 32 64
         do
-            $lein run -- -v $version -w $w -s $s > "$result_path/$version-w$w-s$s-i$i.txt"
+            ./lein run -- -v $version -w $w -s $s > "$result_path/$version-w$w-s$s-i$i.txt"
         done
     done
 done
