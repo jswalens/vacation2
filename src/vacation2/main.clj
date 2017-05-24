@@ -3,6 +3,7 @@
   (:require [clojure.string]
             [clojure.tools.cli]
             [base64]
+            [crypto.password.bcrypt :as password]
             [util :refer :all]))
 
 ; LOGGING
@@ -173,12 +174,16 @@ Options:
         ticket-number     (rand-int 10000)
         itinerary         (:destination @reservation)
         timestamp         (System/currentTimeMillis)
+        password          (password/encrypt
+                            (apply str (repeatedly 20
+                              #(rand-nth "abcdefghijklmnopqrstuvwxyz"))))
         data              (clojure.string/join "//"
                              [name-of-passenger
                               info-travel-agent
                               ticket-number
                               itinerary
-                              timestamp])]
+                              timestamp
+                              password])]
     (base64/str->base64 data)))
 
 (defn process-reservation-orig
