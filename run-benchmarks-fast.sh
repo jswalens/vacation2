@@ -15,7 +15,7 @@ echo "Making uberjar"
 ./lein uberjar
 echo "Uberjar made"
 
-echo "Benchmarking..."
+echo "Benchmarking (fast)..."
 
 mkdir -p "$result_path"
 
@@ -23,16 +23,16 @@ for i in 1 2 3
 do
     # ORIGINAL VERSION
     version="orig"
-    for w in 1 2 3 4 5 6 7 8 10 12 14 16 20 24 28 32 48 64
+    for w in 1 2 3 4 6 8 12 16 24 32 48 64
     do
         ./lein run -- -v $version -w $w $EXTRA_OPTIONS > "$result_path/$version-w$w-i$i.txt"
     done
 
     # TXACT VERSION
     version="txact"
-    for w in 1 2 3 4 5 6 7 8 10 12 14 16 20 24 28 32 48 64
+    for w in 1 2 3 4 6 8 12 16 24 32 48 64
     do
-        for s in 1 2 3 4 5 6 7 8 10 12 14 16 32 64
+        for s in 1 2 3 4 6 8 12 16 32 64
         do
             ./lein run -- -v $version -w $w -s $s $EXTRA_OPTIONS > "$result_path/$version-w$w-s$s-i$i.txt"
         done
