@@ -48,6 +48,9 @@
     ; Reservations are called "transactions" in vacation.
     :default 1000
     :parse-fn #(Integer/parseInt %)]
+   ["-p" "--password-work-factor N" "Work factor for password generation"
+    :default 11
+    :parse-fn #(Integer/parseInt %)]
    ["-d" "--debug" "Print debug information"]
    ["-h" "--help" "Print help information"]])
 
@@ -80,16 +83,17 @@ Options:
     (when (:debug args)
       (def log log-debug))
     (if proceed?
-      (let [options {:version             (case (:version args)
-                                            "txact" :txact
-                                                    :orig)
-                     :n-workers           (:workers args)
-                     :n-secondary-workers (if (not= (:version args) "txact")
-                                            0
-                                            (:secondary-workers args))
-                     :n-reservations      (:reservations args)
-                     :n-relations         (:relations args)
-                     :n-queries           (:queries args)}]
+      (let [options {:version              (case (:version args)
+                                             "txact" :txact
+                                                     :orig)
+                     :n-workers            (:workers args)
+                     :n-secondary-workers  (if (not= (:version args) "txact")
+                                             0
+                                             (:secondary-workers args))
+                     :n-reservations       (:reservations args)
+                     :n-relations          (:relations args)
+                     :n-queries            (:queries args)
+                     :password-work-factor (:password-work-factor args)}]
         (println "options: " options)
         (when (and (= (:version args) :orig)
                    (not= (:secondary-workers args) 20)) ; 20 is the default
@@ -163,7 +167,7 @@ Options:
     (alter relation update :seats - n-seats)
     (alter reservation update :total + (:price @relation))))
 
-(defn generate-pnr [reservation]
+(defn generate-pnr [reservation password-work-factor]
   "Generate Passenger Name Record (PNR).
   The generated PNR is fake, but based on the information described on
   Wikipedia.
@@ -176,7 +180,8 @@ Options:
         timestamp         (System/currentTimeMillis)
         password          (password/encrypt
                             (apply str (repeatedly 20
-                              #(rand-nth "abcdefghijklmnopqrstuvwxyz"))))
+                              #(rand-nth "abcdefghijklmnopqrstuvwxyz")))
+                            password-work-factor)
         data              (clojure.string/join "//"
                              [name-of-passenger
                               info-travel-agent
@@ -189,7 +194,7 @@ Options:
 (defn process-reservation-orig
   [reservation
    {:keys [cars flights rooms]}
-   {:keys [n-queries]}]
+   {:keys [n-queries password-work-factor]}]
   "Process a reservation: find a car, flight, and room for the reservation,
   generate a PNR, and update the data structures.
 
@@ -200,7 +205,7 @@ Options:
           found-car    (look-for-seats (random-subset n-queries cars) n-people)
           found-flight (look-for-seats (random-subset n-queries flights) n-people)
           found-room   (look-for-seats (random-subset n-queries rooms) n-people)
-          pnr          (generate-pnr reservation)]
+          pnr          (generate-pnr reservation password-work-factor)]
       (log "reserving:"
         (if found-car    (str "car "    (:id @found-car))    "no car")    "-"
         (if found-flight (str "flight " (:id @found-flight)) "no flight") "-"
@@ -216,7 +221,7 @@ Options:
 (defn process-reservation-txact
   [reservation
    {:keys [cars flights rooms]}
-   {:keys [n-queries]}
+   {:keys [n-queries password-work-factor]}
    secondary-workers]
   "Process a reservation: find a car, flight, and room for the reservation,
   generate a PNR, and update the data structures.
@@ -227,7 +232,7 @@ Options:
     (send (rand-nth secondary-workers) :car    cars    reservation n-queries)
     (send (rand-nth secondary-workers) :flight flights reservation n-queries)
     (send (rand-nth secondary-workers) :room   rooms   reservation n-queries)
-    (let [pnr (generate-pnr reservation)]
+    (let [pnr (generate-pnr reservation password-work-factor)]
       (alter reservation assoc
         :status :in-process
         :pnr    pnr)))
