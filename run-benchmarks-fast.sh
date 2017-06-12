@@ -26,16 +26,16 @@ for i in 1 2 3
 do
     # ORIGINAL VERSION
     version="orig"
-    for w in 1 2 3 4 6 8 12 16 24 32 48 64
+    for w in 1 2 4 8 16 32 64
     do
         ./lein run -- -v $version -w $w $PARAMETERS > "$result_path/$version-w$w-i$i.txt"
     done
 
     # TXACT VERSION
     version="txact"
-    for w in 1 2 3 4 6 8 12 16 24 32 48 64
+    for w in 1 2 4 8 16 32 64
     do
-        for s in 1 2 3 4 6 8 12 16 32 64
+        for s in 1 2 4 8 16 32 64
         do
             ./lein run -- -v $version -w $w -s $s $PARAMETERS > "$result_path/$version-w$w-s$s-i$i.txt"
         done
