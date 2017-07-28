@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# To use the version with dependencies, run:
+# $ cp project-dependency.clj project.clj && ./run-benchmarks.sh
+# To use the version with delays, run:
+# $ cp project-delay.clj project.clj && ./run-benchmarks.sh
+
 set -ex
 
 pwd="`pwd`"
