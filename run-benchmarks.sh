@@ -4,11 +4,14 @@ set -ex
 
 pwd="`pwd`"
 rev=`git rev-parse HEAD | cut -c1-8`
+clj=`grep ":resource-paths" project.clj | sed -n 's/.*"resources\/\(.*\)\.jar".*/\1/p'`
 date=`date "+%Y%m%dT%H%M"`
 result_path="$pwd/results/$date-$rev"
 
 : ${PARAMETERS:="-t 30 -n 300"}
-echo "Parameters: $PARAMETERS"
+
+info="Parameters: $PARAMETERS\nRevision: $rev\nClojure version: $clj\nDate: $date"
+echo $info
 
 echo "Installing/checking lein..."
 ./lein version
@@ -21,6 +24,7 @@ echo "Uberjar made"
 echo "Benchmarking..."
 
 mkdir -p "$result_path"
+echo $info > "$result_path/info.txt"
 
 for i in 1 2 3
 do
