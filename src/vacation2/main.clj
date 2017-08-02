@@ -195,24 +195,27 @@ Options:
   [reservation
    {:keys [cars flights rooms]}
    {:keys [n-queries password-work-factor]}]
-  "Process a reservation: find a car, flight, and room for the reservation,
-  generate a PNR, and update the data structures.
+  "Process a reservation: find two flights, a room, and a car for the
+  reservation, generate a PNR, and update the data structures.
 
   This version is similar to the original vacation benchmark."
   (dosync
     (log "start tx for reservation" (:id @reservation))
-    (let [n-people     (:n-people @reservation)
-          found-car    (look-for-seats (random-subset n-queries cars) n-people)
-          found-flight (look-for-seats (random-subset n-queries flights) n-people)
-          found-room   (look-for-seats (random-subset n-queries rooms) n-people)
-          pnr          (generate-pnr reservation password-work-factor)]
+    (let [n-people      (:n-people @reservation)
+          found-flight1 (look-for-seats (random-subset n-queries flights) n-people)
+          found-flight2 (look-for-seats (random-subset n-queries flights) n-people)
+          found-room    (look-for-seats (random-subset n-queries rooms) n-people)
+          found-car     (look-for-seats (random-subset n-queries cars) n-people)
+          pnr           (generate-pnr reservation password-work-factor)]
       (log "reserving:"
-        (if found-car    (str "car "    (:id @found-car))    "no car")    "-"
-        (if found-flight (str "flight " (:id @found-flight)) "no flight") "-"
-        (if found-room   (str "room "   (:id @found-room))   "no room"))
-      (when found-car    (reserve-relation reservation found-car n-people))
-      (when found-flight (reserve-relation reservation found-flight n-people))
-      (when found-room   (reserve-relation reservation found-room n-people))
+        (if found-flight1 (str "flight1 " (:id @found-flight1)) "no flight") "-"
+        (if found-flight2 (str "flight2 " (:id @found-flight2)) "no flight") "-"
+        (if found-room    (str "room "   (:id @found-room))   "no room")     "-"
+        (if found-car     (str "car "    (:id @found-car))    "no car"))
+      (when found-flight1 (reserve-relation reservation found-flight1 n-people))
+      (when found-flight2 (reserve-relation reservation found-flight2 n-people))
+      (when found-room    (reserve-relation reservation found-room n-people))
+      (when found-car     (reserve-relation reservation found-car n-people))
       (alter reservation assoc
         :status :processed
         :pnr    pnr)))
@@ -223,15 +226,16 @@ Options:
    {:keys [cars flights rooms]}
    {:keys [n-queries password-work-factor]}
    secondary-workers]
-  "Process a reservation: find a car, flight, and room for the reservation,
-  generate a PNR, and update the data structures.
+  "Process a reservation: find two flights, a room, and a car for the
+  reservation, generate a PNR, and update the data structures.
 
-  This version books the car, flight, and room in a separate actor."
+  This version books the items in a separate actor."
   (dosync
     (log "start tx for reservation" (:id @reservation))
-    (send (rand-nth secondary-workers) :car    cars    reservation n-queries)
+    (send (rand-nth secondary-workers) :flight flights reservation n-queries)
     (send (rand-nth secondary-workers) :flight flights reservation n-queries)
     (send (rand-nth secondary-workers) :room   rooms   reservation n-queries)
+    (send (rand-nth secondary-workers) :car    cars    reservation n-queries)
     (let [pnr (generate-pnr reservation password-work-factor)]
       (alter reservation assoc
         :status :in-process
@@ -305,7 +309,7 @@ Options:
                         (range n-workers)))
           expected-n-done-messages
             (case version
-              :txact (* n-reservations 4)
+              :txact (* n-reservations 5) ; 1 from reservation, 4 from relations
                      n-reservations)
           start-time
             (System/nanoTime)]
