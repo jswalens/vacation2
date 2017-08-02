@@ -15,7 +15,10 @@ result_path="$pwd/results/$date-$rev"
 
 : ${PARAMETERS:="-t 30 -n 300"}
 
-info="Parameters: $PARAMETERS\nRevision: $rev\nClojure version: $clj\nDate: $date"
+info="Parameters: $PARAMETERS
+Revision: $rev
+Clojure version: $clj
+Date: $date"
 echo $info
 
 echo "Installing/checking lein..."
