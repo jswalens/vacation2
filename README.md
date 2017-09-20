@@ -44,5 +44,8 @@ Licensed under the MIT license, included in the file `LICENSE`.
 
 ## References
 
-[Swalens2017] J. Swalens, J. De Koster, and W. De Meuter. 2017. "Transactional Actors: Communication in Transactions". In _Proceedings of the 4th International Workshop on Software Engineering for Parallel Systems (SEPS'17)_.
-[Minh2008] C. C. Minh, J. Chung, C. Kozyrakis, and K. Olukotun. 2008. "STAMP: Stanford Transactional Applications for Multi-Processing". In _Proceedings of the IEEE International Symposium on Workload Characterization (IISWC'08)_.
+[Swalens2017]
+J. Swalens, J. De Koster, and W. De Meuter. 2017. "Transactional Actors: Communication in Transactions". In _Proceedings of the 4th International Workshop on Software Engineering for Parallel Systems (SEPS'17)_.
+
+[Minh2008]
+C. C. Minh, J. Chung, C. Kozyrakis, and K. Olukotun. 2008. "STAMP: Stanford Transactional Applications for Multi-Processing". In _Proceedings of the IEEE International Symposium on Workload Characterization (IISWC'08)_.
