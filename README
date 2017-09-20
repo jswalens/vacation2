@@ -1,6 +1,6 @@
 # vacation2
 
-This is the vacation2 benchmark, an adapted version of the Vacation benchmark of the STAMP benchmark suite [Minh2008] ported to Clojure and extended with the use of transactional actors.
+This is the vacation2 benchmark, an adapted version of the Vacation benchmark of the STAMP benchmark suite [Minh2008] ported to Clojure and extended with the use of transactional actors [Swalens2017].
 
 ## How to run
 
@@ -23,17 +23,17 @@ Parameters:
 
 (Run `lein run -- -h` to get this description and more.)
 
-Running the program prints the given options, and the total execution time to the screen.
+Running the program prints the given options and the total execution time to the screen.
 
 ## Running the benchmarks
 
 There are three scripts, `run-benchmarks.sh`, `run-benchmarks-fast.sh`, and `run-benchmarks-slow.sh`, that run the benchmark for a variation of parameters. (slow runs fewer options, fast more.) The results are written to subdirectory of `results/`.
 
-In `results/`, there are a few scripts to generate the graphs and table of the paper. The data set used to generate these is also included.
+In `results/`, there are a few scripts to generate the graphs and table of the paper [Swalens2017]. The data set used to generate these is also included.
 
 ## Two versions of transactional actors
 
-By default, `project.clj` refers to `resources/clojure-1.8.0-transactional-actors-3.jar`. This is a fork of Clojure 1.8.0, extended with support for transactional actors. Its source code can be found at https://github.com/jswalens/transactional-actors.
+By default, `project.clj` refers to `resources/clojure-1.8.0-transactional-actors-3.jar`. This is a fork of Clojure 1.8.0, extended with support for transactional actors. Its source code can be found at https://github.com/jswalens/transactional-actors; some details on the implementation can be found in [Swalens2017].
 
 Next to this, there's also `resources/clojure-1.8.0-transactional-actors-delay-3.jar`. This is a fork of Clojure 1.8.0, that supports transactional actors by delaying messages sent in a transaction until the transaction has committed.
 
@@ -44,4 +44,5 @@ Licensed under the MIT license, included in the file `LICENSE`.
 
 ## References
 
-[Minh2008] Minh, C. C., Chung, J., Kozyrakis, C., & Olukotun, K. (2008). "STAMP: Stanford transactional applications for multi-processing." In IEEE International Symposium on Workload Characterization (IISWC 2008). pp. 35-46.
+[Swalens2017] J. Swalens, J. De Koster, and W. De Meuter. 2017. "Transactional Actors: Communication in Transactions". In _Proceedings of the 4th International Workshop on Software Engineering for Parallel Systems (SEPS'17)_.
+[Minh2008] C. C. Minh, J. Chung, C. Kozyrakis, and K. Olukotun. 2008. "STAMP: Stanford Transactional Applications for Multi-Processing". In _Proceedings of the IEEE International Symposium on Workload Characterization (IISWC'08)_.
