@@ -245,42 +245,44 @@ Options:
 ; BEHAVIORS
 
 (def reserve-relation-behavior
-  (behavior
-    [secondary-worker-id master]
+  (behavior [secondary-worker-id master]
     [relation-name relation reservation n-queries]
-    (log "reserve" relation-name "for reservation" (:id @reservation)
-      "by secondary worker" secondary-worker-id)
-    (dosync
-      (let [n-people (:n-people @reservation)
-            found-relation
-              (look-for-seats (random-subset n-queries relation) n-people)]
-        (when found-relation
-          (log "reserving" relation-name (:id @found-relation))
-          (reserve-relation reservation found-relation n-people))))
-    (send master :done relation-name (:id @reservation))))
+    (do
+      (log "reserve" relation-name "for reservation" (:id @reservation)
+        "by secondary worker" secondary-worker-id)
+      (dosync
+        (let [n-people (:n-people @reservation)
+              found-relation
+                (look-for-seats (random-subset n-queries relation) n-people)]
+          (when found-relation
+            (log "reserving" relation-name (:id @found-relation))
+            (reserve-relation reservation found-relation n-people))))
+      (send master :done relation-name (:id @reservation)))))
 
 ; In vacation, this corresponds to a client.
 (def reservation-behavior
-  (behavior
-    [worker-id master secondary-workers data options]
-    [reservation]
+  (behavior [worker-id master secondary-workers data options]
     ; Note: as opposed to the vacation benchmark, we only support making
     ; reservations, not deleting customers or updating tables.
-    (log "start reservation" (:id @reservation) "by worker" worker-id)
-    (case (:version options)
-      :txact
-        (process-reservation-txact reservation data options secondary-workers)
-      ;orig
-        (process-reservation-orig reservation data options))
-    (send master :done :reservation (:id @reservation))))
+    [_reserve reservation]
+    ; Instead of matching with :reserve, we write _reserve, because the version
+    ; of Clojure with delayed messages does not support pattern matching.
+    (do
+      (log "start reservation" (:id @reservation) "by worker" worker-id)
+      (case (:version options)
+        :txact
+          (process-reservation-txact reservation data options secondary-workers)
+        ;orig
+          (process-reservation-orig reservation data options))
+      (send master :done :reservation (:id @reservation)))))
 
 (def done? (promise))
 
 (def master-waiting-behavior
-  (behavior
-    [start-time n]
-    [_done _key _id]
-    ; _key is one of :reservation, :car, :flight, :room
+  (behavior [start-time n]
+    [_done _key _id] ; _key is one of :reservation, :car, :flight, :room
+    ; Instead of matching with :done, we write _done, because the version of
+    ; Clojure with delayed messages does not support pattern matching.
     (if (= n 1)
       (do
         (println "Total execution time:"
@@ -291,9 +293,10 @@ Options:
       (become :same start-time (dec n)))))
 
 (def master-initial-behavior
-  (behavior
-    [{:keys [version n-workers n-secondary-workers n-reservations] :as options}]
+  (behavior [{:keys [version n-workers n-secondary-workers n-reservations] :as options}]
     [_start]
+    ; Instead of matching with :start, we write _start, because the version of
+    ; Clojure with delayed messages does not support pattern matching.
     (let [{:keys [reservations cars flights rooms] :as data}
             (initialize-data options)
           ; It is important to wrap the two maps below in doall, so that they
@@ -315,7 +318,7 @@ Options:
             (System/nanoTime)]
       #_(log-data data)
       (doseq [[worker reservation] (zip (cycle reservation-workers) reservations)]
-        (send worker reservation))
+        (send worker :reserve reservation))
       (become master-waiting-behavior start-time expected-n-done-messages))))
 
 ; MAIN
