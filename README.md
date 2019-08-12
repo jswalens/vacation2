@@ -12,10 +12,10 @@ Run the benchmark as follows (all parameters are optional):
 
 To run the original version of the benchmark, which does not use transactional actors and is similar to the benchmark of the STAMP suite, execute:
 
-    $ lein run -- -v orig -w 4 -t 30 -n 300
+    $ lein run -- -v original -w 4 -t 30 -n 300
 
 Parameters:
-* `-v`: `orig` for the original variant (default), `txact` for the variant with transactional actors.
+* `-v`: `original` for the original variant (default), `txact` for the variant with transactional actors.
 * `-w`: the number of primary worker actors.
 * `-s`: the number of secondary worker actors (only for txact variant).
 * `-t`: number of reservations.
@@ -32,7 +32,7 @@ Running the program prints the given options and the total execution time to the
 
 There are two variants on this benchmark, which you can select using the command line argument `-v`:
 
-* orig: an adapted version of the vacation benchmark, that does not use transactional actors.
+* original: an adapted version of the vacation benchmark, that does not use transactional actors.
 * txact: a version that splits transactions up and sends messages to secondary worker actors, using transactional actors.
 
 Furthermore, there are two implementations of transactional actors included in this repository, in the folder `resources`:

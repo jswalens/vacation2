@@ -32,7 +32,7 @@ echo $info > "$result_path/info.txt"
 for i in 1 2 3
 do
     # ORIGINAL VERSION
-    version="orig"
+    version="original"
     for w in 1 2 4 8 16 32 64
     do
         ./lein run -- -v $version -w $w $PARAMETERS > "$result_path/$version-w$w-i$i.txt"

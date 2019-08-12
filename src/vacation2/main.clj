@@ -23,11 +23,11 @@
 ; PARSE COMMAND LINE OPTIONS
 
 (def cli-options
-  [["-v" "--version X" "Version (orig, txact)"
-    ; There are two versions of this program, "orig" works similar to the
+  [["-v" "--version X" "Version (original, txact)"
+    ; There are two versions of this program, "original" works similar to the
     ; original vacation benchmark, while "txact" uses secondary worker actors.
-    :default "orig"
-    :validate [#(contains? #{"orig" "txact"} %) "Must be orig or txact"]]
+    :default "original"
+    :validate [#(contains? #{"original" "txact"} %) "Must be original or txact"]]
    ["-w" "--workers N" "Number of workers"
     ; Workers are called clients in vacation, the option is -c there.
     :default 20
@@ -85,7 +85,7 @@ Options:
     (if proceed?
       (let [options {:version              (case (:version args)
                                              "txact" :txact
-                                                     :orig)
+                                                     :original)
                      :n-workers            (:workers args)
                      :n-secondary-workers  (if (not= (:version args) "txact")
                                              0
@@ -95,10 +95,10 @@ Options:
                      :n-queries            (:queries args)
                      :password-work-factor (:password-work-factor args)}]
         (println "options: " options)
-        (when (and (= (:version args) :orig)
+        (when (and (= (:version args) :original)
                    (not= (:secondary-workers args) 20)) ; 20 is the default
           (println "WARNING: did not expect number of secondary workers to be"
-            "specified when version is 'orig'."))
+            "specified when version is 'original'."))
         (when (not= (rem (:n-reservations options) (:n-workers options)) 0)
           (println "WARNING: number of reservations is not divisible by number"
             "of workers."))
@@ -191,7 +191,7 @@ Options:
                               password])]
     (base64/str->base64 data)))
 
-(defn process-reservation-orig
+(defn process-reservation-original
   [reservation
    {:keys [cars flights rooms]}
    {:keys [n-queries password-work-factor]}]
@@ -272,8 +272,8 @@ Options:
       (case (:version options)
         :txact
           (process-reservation-txact reservation data options secondary-workers)
-        ;orig
-          (process-reservation-orig reservation data options))
+        ;original
+          (process-reservation-original reservation data options))
       (send master :done :reservation (:id @reservation)))))
 
 (def done? (promise))
@@ -305,7 +305,7 @@ Options:
           secondary-workers
             (doall (map #(spawn reserve-relation-behavior % *actor*)
                         (range n-secondary-workers)))
-            ; n-secondary-workers = 0 if version == :orig
+            ; n-secondary-workers = 0 if version == :original
           reservation-workers
             (doall (map #(spawn reservation-behavior
                           % *actor* secondary-workers data options)
