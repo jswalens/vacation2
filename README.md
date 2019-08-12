@@ -53,7 +53,7 @@ This benchmark has several major differences with the original one from STAMP, i
 
 ## Running the benchmarks
 
-There are three scripts, `run-benchmarks.sh`, `run-benchmarks-fast.sh`, and `run-benchmarks-slow.sh`, that run the benchmark for a variation of parameters. (fast runs fewer options, slow more.) The results are written to subdirectory of `results/`.
+The script `benchmark.sh` runs the benchmark for a variation of parameters. Pass the option `--all` or `--quick` to run more/fewer variations. The results are written to subdirectory of `results/`.
 
 In `results/`, there are a few scripts to generate the graphs and table of the paper [Swalens2017]. The data set used to generate these is also included.
 
