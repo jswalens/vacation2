@@ -1,8 +1,14 @@
 #!/bin/bash
-
-# To use the version with dependencies, run:
+#
+# Benchmarking script
+#
+# Usage:
+# Use --all to run more extensive tests, or --quick to run fewer variations.
+# Call this as `JVM_OPTS="..." ./benchmark.sh` to pass arguments to the JVM.
+#
+# To use Chocola (sending messages with dependencies), run:
 # $ cp project-dependency.clj project.clj && ./run-benchmarks.sh
-# To use the version with delays, run:
+# To use the fork of Clojure that sends messages with delays, run:
 # $ cp project-delay.clj project.clj && ./run-benchmarks.sh
 
 set -ex
