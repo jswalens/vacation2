@@ -17,7 +17,7 @@ if "-medians" in FILE:
 if len(sys.argv) >= 3:
     OUTPUT_PDF = sys.argv[2]
 else:
-    OUTPUT_PDF = re.sub(r"(-medians)?\.csv$", "-orig-speedup-graph.pdf", FILE)
+    OUTPUT_PDF = re.sub(r"(-medians)?\.csv$", "-original-speedup-graph.pdf", FILE)
 
 def parse_file(filename):
     results = defaultdict(list)  # w -> [time]
@@ -30,7 +30,7 @@ def parse_file(filename):
                 # time is suffixed with \n
             except ValueError:
                 print("Error: could not read line:\n%s" % line)
-            if version != "orig":
+            if version != "original":
                 continue
             w = int(w)
             if s != "None":
