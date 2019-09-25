@@ -7,9 +7,9 @@
 # Call this as `JVM_OPTS="..." ./benchmark.sh` to pass arguments to the JVM.
 #
 # To use Chocola (sending messages with dependencies), run:
-# $ cp project-dependency.clj project.clj && ./run-benchmarks.sh
+# $ cp project-dependency.clj project.clj && ./benchmark.sh
 # To use the fork of Clojure that sends messages with delays, run:
-# $ cp project-delay.clj project.clj && ./run-benchmarks.sh
+# $ cp project-delay.clj project.clj && ./benchmark.sh
 
 set -ex
 
@@ -19,7 +19,7 @@ clj=`grep ":resource-paths" project.clj | sed -n 's/.*"resources\/\(.*\)\.jar".*
 date=`date "+%Y%m%dT%H%M"`
 result_path="$pwd/results/$date-$rev"
 
-: ${PARAMETERS:="-t 30 -n 300"}
+: ${PARAMETERS:="-t 1000 -p 5 -r 50 -n 10"}
 
 if [ "$1" == "--all" ]; then
     benchmark_parameters="all"
