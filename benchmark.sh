@@ -33,9 +33,9 @@ elif [ "$1" == "--quick" ]; then
     ss="1 2 4 8 16 32 64"
 else
     benchmark_parameters="normal"
-    is=$(seq 1 3)
-    ws="1 2 3 4 6 8 12 16 24 32 48 64"
-    ss="1 2 3 4 6 8 12 16 24 32 48 64"
+    is=$(seq 1 5)
+    ws="1 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48 50 52 54 56 58 60 62 64"
+    ss="1 2 4 8 16 32 64"
 fi
 
 info="Parameters: $PARAMETERS
