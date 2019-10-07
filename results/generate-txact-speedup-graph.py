@@ -52,14 +52,22 @@ def parse_file(filename):
 def calculate_speedups(quartiles):
     speedups = OrderedDict()  # w -> first|median|third -> speedup
     speedup_base = quartiles[(1, 1)]['median']
+    max_speedup = 1
+    max_speedup_key = None
     for (w_s, quarts) in quartiles.items():
+        median = speedup_base / quarts['median']
         speedups[w_s] = {
             'first':  speedup_base / quarts['third'],
-            'median': speedup_base / quarts['median'],
+            'median': median,
             'third':  speedup_base / quarts['first'],
         }
         # Watch out: higher time is lower speedup
         # => first quartile in time is third quartile in speedup
+        if median > max_speedup:
+            max_speedup = median
+            max_speedup_key = w_s
+    print("Maximal speed-up of {} reached for {}".format(max_speedup,
+        max_speedup_key))
     return speedups
 
 def calculate_errors(speedups):
