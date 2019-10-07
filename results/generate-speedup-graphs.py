@@ -128,13 +128,16 @@ def draw_speedup_original(speedups, errors):
         )
     ax.set_xlim(0.8, 64.2)
 
-    ax.annotate(xy=(1, 1), s="time = 5480 ms",
-        xytext=(20, -20), textcoords="offset points",
-        arrowprops=dict(arrowstyle="->"))
-
-    ax.annotate(xy=(42, 2.55), s="For $p = 42$:\nspeed-up = 2.6\ntime = 2102 ms",
-        xytext=(0, -45), textcoords="offset points",
-        arrowprops=dict(arrowstyle="->"))
+    arrowprops = {
+        "arrowstyle": "->",
+        "color": "black",
+        "connectionstyle": "angle3,angleA=0,angleB=90",
+        "shrinkB": 5,
+    }
+    ax.annotate(xy=(1, 1), s="time = 5656 ms",
+        xytext=(30, -25), textcoords="offset points", arrowprops=arrowprops)
+    ax.annotate(xy=(42, 2.5), s="For $p = 42$:\nspeed-up = 2.5\ntime = 2230 ms",
+        xytext=(0, -60), textcoords="offset points", arrowprops=arrowprops)
 
     plt.savefig(OUTPUT_ORIGINAL_NAME, bbox_inches="tight")
     #plt.show()
@@ -181,17 +184,22 @@ def draw_speedup_txact(speedups, errors):
         loc="upper left", prop={"size": "small"})
     ax.set_xlim(0.8, 64.2)
 
-    ax.annotate(xy=(1, 1), s="For $p = 1$, $s = 1$: time = 13701 ms",
-        xytext=(40, 0), textcoords="offset points",
-        arrowprops=dict(arrowstyle="->"))
-
-    ax.annotate(xy=(46, 17.2), s="For $p = 46$, $s = 1$:\nspeed-up = 18.4\ntime = 743 ms",
-        xytext=(-35, -50), textcoords="offset points",
-        arrowprops=dict(arrowstyle="->"))
-
-    ax.annotate(xy=(42, 33.3), s="For $p = 42$, $s = 8$:\nspeed-up = 33.2\ntime = 413 ms",
-        xytext=(-130, -15), textcoords="offset points",
-        arrowprops=dict(arrowstyle="->"))
+    arrowprops = {
+        "arrowstyle": "->",
+        "color": "black",
+        "connectionstyle": "angle3,angleA=0,angleB=90",
+        "shrinkB": 5,
+    }
+    ax.annotate(xy=(1, 1), s="For $p = 1$, $s = 1$: time = 14377 ms",
+        xytext=(40, 0), textcoords="offset points", arrowprops=arrowprops)
+    ax.annotate(xy=(38, 27.9), s="For $p = 38$, $s = 8$:\nspeed-up = 27.9\ntime = 516 ms",
+        xytext=(40, 5), textcoords="offset points", arrowprops=arrowprops)
+    # Find best speed-up for s = 1:
+    # print(sorted(
+    #         ((w, speedup["median"]) for ((w, s), speedup) in speedups.items() if s == 1),
+    #         key=lambda w_res: w_res[1], reverse=True)[0])
+    ax.annotate(xy=(32, 15.4), s="For $p = 32$, $s = 1$:\nspeed-up = 15.4\ntime = 933 ms",
+        xytext=(-35, -50), textcoords="offset points", arrowprops=arrowprops)
 
     plt.savefig(OUTPUT_TXACT_NAME, bbox_inches="tight")
     #plt.show()
