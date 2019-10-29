@@ -68,17 +68,18 @@ def parse_file(filename):
 
     return (quartiles_per_version["original"], quartiles_per_version["txact"])
 
-def calculate_speedups(quartiles, version=""):
+def calculate_speedups(quartiles, base=None, version=""):
     speedups = OrderedDict()  # (w,s) -> first|median|third -> speedup
-    speedup_base = quartiles[(1, 1)]["median"]
+    if base is None:
+        base = quartiles[(1, 1)]["median"]
     max_speedup = 1
     max_speedup_key = None
     for (w_s, quarts) in quartiles.items():
-        median = speedup_base / quarts["median"]
+        median = base / quarts["median"]
         speedups[w_s] = {
-            "first":  speedup_base / quarts["third"],
+            "first":  base / quarts["third"],
             "median": median,
-            "third":  speedup_base / quarts["first"],
+            "third":  base / quarts["first"],
         }
         # Watch out: higher time is lower speedup
         # => first quartile in time is third quartile in speedup
@@ -101,7 +102,7 @@ def draw_speedup_original(speedups, errors):
     # Type 1 fonts
     plt.rcParams["ps.useafm"] = True
     plt.rcParams["pdf.use14corefonts"] = True
-    plt.rcParams["text.usetex"] = True
+    #plt.rcParams["text.usetex"] = True
 
     sns.set_style("whitegrid", {"grid.color": ".9"})
 
@@ -110,12 +111,16 @@ def draw_speedup_original(speedups, errors):
     plt.figure(figsize=(6, 2))
     ax = plt.axes()
     sns.despine(top=True, right=True, left=True, bottom=True)
+
     #ax.set_title("Speed-up of original version", fontsize="x-large")
+
     ax.set_xlabel(r"Number of worker actors ($p$)", fontsize="large")
     #ax.set_xscale("log", basex=2)
     xticks = [x for x in x_values if (x % 4 == 0) or (x == 1)]
     ax.set_xticks(xticks)
     ax.set_xticklabels(xticks)
+    ax.set_xlim(0.8, 64.2)
+
     ax.set_ylabel("Speed-up", fontsize="large")
     ax.set_ylim(0, 3.01)
     #ax.set_yticks([0.0, 1.0, 2.0, 3.0])
@@ -126,7 +131,6 @@ def draw_speedup_original(speedups, errors):
         yerr=errors_,
         #color=COLORS[variation]
         )
-    ax.set_xlim(0.8, 64.2)
 
     arrowprops = {
         "arrowstyle": "->",
@@ -146,7 +150,7 @@ def draw_speedup_txact(speedups, errors):
     # Type 1 fonts
     plt.rcParams["ps.useafm"] = True
     plt.rcParams["pdf.use14corefonts"] = True
-    plt.rcParams["text.usetex"] = True
+    #plt.rcParams["text.usetex"] = True
 
     sns.set_style("whitegrid", {"grid.color": ".9"})
 
@@ -158,17 +162,22 @@ def draw_speedup_txact(speedups, errors):
     #sns.set_palette(sns.husl_palette(len(s_values), h=12/360, l=.5, s=1))
     sns.set_palette(sns.cubehelix_palette(len(s_values), reverse=True))
 
-    plt.figure(figsize=(6, 3))
+    plt.figure()
     ax = plt.axes()
     sns.despine(top=True, right=True, left=True, bottom=True)
+
     #ax.set_title("Speed-up of original version", fontsize="x-large")
+
     ax.set_xlabel(r"Number of primary worker actors ($p$)", fontsize="large")
     #ax.set_xscale("log", basex=2)
     xticks = [x for x in w_values if (x % 4 == 0) or (x == 1)]
     ax.set_xticks(xticks)
     ax.set_xticklabels(xticks)
+    ax.set_xlim(0.8, 64.2)
+
     ax.set_ylabel("Speed-up", fontsize="large")
-    ax.set_ylim(0, 35.01)
+    ax.set_ylim(0, 12.01)
+
     lines = {}
     for s in s_values:
         x = w_values
@@ -179,36 +188,38 @@ def draw_speedup_txact(speedups, errors):
             #color=COLORS[s]
             )
         lines[s] = line
-    ax.legend([lines[s] for s in s_values], ["$s = %i$" % s for s in s_values],
-        #title=r"Secondary worker actors ($s$)",
-        loc="upper left", prop={"size": "small"})
-    ax.set_xlim(0.8, 64.2)
 
-    arrowprops = {
-        "arrowstyle": "->",
-        "color": "black",
-        "connectionstyle": "angle3,angleA=0,angleB=90",
-        "shrinkB": 5,
-    }
-    ax.annotate(xy=(1, 1), s="For $p = 1$, $s = 1$: time = 14377 ms",
-        xytext=(40, 0), textcoords="offset points", arrowprops=arrowprops)
-    ax.annotate(xy=(38, 27.9), s="For $p = 38$, $s = 8$:\nspeed-up = 27.9\ntime = 516 ms",
-        xytext=(40, 5), textcoords="offset points", arrowprops=arrowprops)
+    ax.legend([lines[s] for s in s_values], ["$s = %i$" % s for s in s_values],
+        loc="upper left", prop={"size": "small"})
+
+    def arrowprops(n=90):
+        return {
+            "arrowstyle": "->",
+            "color": "black",
+            "connectionstyle": "angle3,angleA=0,angleB={}".format(n),
+            "shrinkB": 5,
+        }
+    ax.annotate(xy=(1, 0.4), s="For $p = 1$, $s = 1$:\nspeed-up = 0.4\ntime = 14377 ms",
+        xytext=(70, 10), textcoords="offset points", arrowprops=arrowprops(10))
+    ax.annotate(xy=(38, 11.0), s="For $p = 38$, $s = 8$:\nspeed-up = 11.0\ntime = 516 ms",
+        xytext=(60, -5), textcoords="offset points", arrowprops=arrowprops(90))
     # Find best speed-up for s = 1:
     # print(sorted(
     #         ((w, speedup["median"]) for ((w, s), speedup) in speedups.items() if s == 1),
     #         key=lambda w_res: w_res[1], reverse=True)[0])
-    ax.annotate(xy=(32, 15.4), s="For $p = 32$, $s = 1$:\nspeed-up = 15.4\ntime = 933 ms",
-        xytext=(-35, -50), textcoords="offset points", arrowprops=arrowprops)
+    ax.annotate(xy=(32, 5.9), s="For $p = 32$, $s = 1$:\nspeed-up = 6.1\ntime = 933 ms",
+        xytext=(0, -70), textcoords="offset points", arrowprops=arrowprops(90))
 
     plt.savefig(OUTPUT_TXACT_NAME, bbox_inches="tight")
     #plt.show()
 
 (quartiles_original, quartiles_txact) = parse_file(FILE)
-speedups_original = calculate_speedups(quartiles_original, "original")
+speedup_base = quartiles_original[(1, 1)]["median"]
+
+speedups_original = calculate_speedups(quartiles_original, speedup_base, "original")
 errors_original = calculate_errors(speedups_original)
 draw_speedup_original(speedups_original, errors_original)
 
-speedups_txact = calculate_speedups(quartiles_txact, "txact")
+speedups_txact = calculate_speedups(quartiles_txact, speedup_base, "txact")
 errors_txact = calculate_errors(speedups_txact)
 draw_speedup_txact(speedups_txact, errors_txact)
