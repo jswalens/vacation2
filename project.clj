@@ -1,4 +1,4 @@
-(defproject vacation2 "2.0.0"
+(defproject vacation2 "2.0.1"
   :description "Vacation2 benchmark, based on STAMP's vacation benchmark."
   :url "http://soft.vub.ac.be/~jswalens/chocola/"
   :resource-paths ["resources/chocola-2.0.0-standalone.jar"]
